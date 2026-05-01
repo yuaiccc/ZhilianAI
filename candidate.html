@@ -218,8 +218,15 @@
           <!-- Messages go here -->
         </div>
         <div class="chat-input-area">
-          <input id="chatInput" type="text" placeholder="输入你的回答..." autocomplete="off" />
-          <button id="sendBtn" class="btn">发送</button>
+          <div style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+            <div id="suggestedOptions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
+              <!-- Dynamic options go here -->
+            </div>
+            <div style="display: flex; gap: 10px; width: 100%;">
+              <input id="chatInput" type="text" placeholder="输入你的回答..." autocomplete="off" />
+              <button id="sendBtn" class="btn">发送</button>
+            </div>
+          </div>
         </div>
       </section>
 
