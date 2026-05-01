@@ -30,7 +30,8 @@ const els = {
   scoreBiz: document.getElementById('scoreBiz'),
   barBiz: document.getElementById('barBiz'),
   scoreGrowth: document.getElementById('scoreGrowth'),
-  barGrowth: document.getElementById('barGrowth')
+  barGrowth: document.getElementById('barGrowth'),
+  suggestedOptions: document.getElementById('suggestedOptions')
 };
 
 async function init() {
