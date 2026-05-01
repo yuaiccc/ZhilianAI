@@ -196,11 +196,14 @@ async function triggerAgentTurn() {
                 els.suggestedOptions.innerHTML = '';
                 if (data.options && data.options.length > 0) {
                   data.options.forEach(opt => {
+                    // 清理选项中可能带有的前缀如 "选项A：", "选项A的内容：", "A." 等
+                    const cleanOpt = opt.replace(/^(?:选项[A-C1-3](?:的内容)?[:：\s]*|[A-C1-3]\.[:：\s]*)/i, '').trim();
+                    
                     const btn = document.createElement('button');
                     btn.className = 'suggest-btn';
-                    btn.textContent = opt;
+                    btn.textContent = cleanOpt;
                     btn.onclick = () => {
-                      els.chatInput.value = opt;
+                      els.chatInput.value = cleanOpt;
                       els.sendBtn.click();
                     };
                     els.suggestedOptions.appendChild(btn);
