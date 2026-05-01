@@ -38,9 +38,16 @@ const els = {
 
 let pressureTimer = null;
 let pressureSecondsLeft = 30;
+let questionStartTime = null;
 
-function startPressureTimer() {
+function startPressureTimer(isPressure) {
   clearInterval(pressureTimer);
+  
+  if (!isPressure) {
+    els.pressureBarContainer.classList.add('hidden');
+    return;
+  }
+  
   pressureSecondsLeft = 30;
   els.pressureBarContainer.classList.remove('hidden');
   els.pressureBar.style.transition = 'none';
@@ -216,14 +223,10 @@ async function triggerAgentTurn() {
                   let cleanReply = (data.fullReply || "").replace(/^(?:\[?(?:HR 面试官|业务专家|成长导师|HR|Biz|Growth)\]?[:：]\s*)+/gi, '').trim();
                   lastBubble.textContent = cleanReply;
                   
-                  if (data.score_change !== undefined && data.dimension) {
-                    const badge = document.createElement('div');
-                    badge.className = 'msg-algorithm-badge';
-                    const sign = data.score_change >= 0 ? '+' : '';
-                    const color = data.score_change >= 0 ? 'var(--pass)' : 'var(--reject)';
-                    badge.innerHTML = `⚙️ [打分引擎] <strong>${data.dimension} <span style="color: ${color}">${sign}${data.score_change}</span></strong>：${escapeHtml(data.reason)}`;
-                    els.chatMessages.lastElementChild.appendChild(badge);
-                  }
+                  // Hide algorithm rationale badge from UI, keep it as black box until report
+                  // if (data.score_change !== undefined && data.dimension) {
+                  //   ...
+                  // }
 
                   messages.push({ role: 'assistant', content: `[${agentName}]: ${cleanReply}` });
                   
@@ -268,19 +271,29 @@ async function triggerAgentTurn() {
   els.chatInput.disabled = false;
   els.chatInput.focus();
   
-  // Start pressure timer for the user to answer
-  startPressureTimer();
+  // Start pressure timer ONLY if there are multiple agents (pressure interview interruption)
+  const isPressure = targetAgents.length > 1;
+  startPressureTimer(isPressure);
+  
+  // Record the time when the user starts thinking
+  questionStartTime = Date.now();
 }
 
 els.sendBtn.addEventListener('click', () => {
   const text = els.chatInput.value.trim();
   if (!text) return;
   
+  let timeTaken = 0;
+  if (questionStartTime) {
+    timeTaken = Math.round((Date.now() - questionStartTime) / 1000);
+  }
+  
   // Clear suggested options once user replies
   els.suggestedOptions.innerHTML = '';
   
   appendMessage('user', text);
-  messages.push({ role: 'user', content: text });
+  // Pass the response time to backend as a hidden dimension
+  messages.push({ role: 'user', content: text + `\n(注：候选人本次思考与回答耗时 ${timeTaken} 秒)` });
   els.chatInput.value = '';
   
   if (currentTurn >= MAX_TURNS) {
