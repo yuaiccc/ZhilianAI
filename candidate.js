@@ -179,6 +179,16 @@ async function triggerAgentTurn() {
                 let cleanReply = (data.fullReply || "").replace(/^(?:\[?(?:HR 面试官|业务专家|成长导师|HR|Biz|Growth)\]?[:：]\s*)+/gi, '').trim();
                 lastBubble.textContent = cleanReply;
                 
+                // Show algorithm rationale badge if present
+                if (data.score_change !== undefined && data.dimension) {
+                  const badge = document.createElement('div');
+                  badge.className = 'msg-algorithm-badge';
+                  const sign = data.score_change >= 0 ? '+' : '';
+                  const color = data.score_change >= 0 ? 'var(--pass)' : 'var(--reject)';
+                  badge.innerHTML = `⚙️ [打分引擎] <strong>${data.dimension} <span style="color: ${color}">${sign}${data.score_change}</span></strong>：${escapeHtml(data.reason)}`;
+                  els.chatMessages.lastElementChild.appendChild(badge);
+                }
+
                 // 后端上下文带上角色名
                 messages.push({ role: 'assistant', content: `[${agentName}]: ${cleanReply}` });
                 

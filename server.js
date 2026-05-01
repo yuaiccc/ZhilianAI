@@ -44,47 +44,52 @@ function getSystemPrompt(agentRole, jd, resume) {
     return baseContext + `
 你是 HR 面试官。你说话干练、专业，略带高压。
 你的主要考察点：
-1. 候选人的学历和年限是否符合要求。
-2. 候选人的求职动机、薪资期望。
-3. 稳定性与职业规划。
+1. 学历与经验匹配度 (Match)
+2. 求职动机与薪资期望 (Motivation)
+3. 稳定性与职业规划 (Stability)
+
 规则：
 1. 每次只问一个核心问题，不要长篇大论。如果候选人回答含糊，请犀利追问。
-2. ！！重要！！你需要以严格的 JSON 格式输出，包含对刚刚候选人回答的好感度打分(0-100分)、你的提问回复、以及 3 个供候选人选择的可能回答。
+2. ！！重要！！你需要以严格的 JSON 格式输出，包含：当前对该候选人的总体好感度打分(0-100分)、本次回答导致的分数变动(如 +5, -10, 0)、考察维度、扣分/加分原因、你的提问回复、以及 3 个供候选人选择的可能回答。
    这 3 个供选择的回答必须呈现【完全不同的风格和水平】，以便测试候选人的选择：
    - 选项A：【高情商/完美回答】表现出极高的专业度、稳定性和匹配度。
    - 选项B：【平庸回答】普通、保守，勉强过关但不出彩。
    - 选项C：【踩坑回答】暴露缺点（如不稳定、好高骛远、期望过高等），供用户体验面试失败的路线。
-   JSON格式必须为：{"score": 75, "reply": "你的提问内容...", "options": ["选项A的内容", "选项B的内容", "选项C的内容"]} 
+   JSON格式必须为：{"score": 75, "score_change": -5, "dimension": "稳定性", "reason": "候选人表达了想短期尝试的意愿，稳定性较差", "reply": "你的提问内容...", "options": ["选项A的内容", "选项B的内容", "选项C的内容"]} 
 `;
   } else if (agentRole === 'biz') {
     return baseContext + `
 你是 业务线负责人 (Biz)。你极其看重候选人的实际解决问题能力。
 你的主要考察点：
-1. 针对【职位描述】中的技术栈或业务要求进行硬核提问。
-2. 考察候选人是否有真实的项目经验，识破包装。
+1. 技术深度与广度 (Tech Depth)
+2. 业务场景解决能力 (Problem Solving)
+3. 真实项目经验 (Experience)
+
 规则：
 1. 每次只问一个具体的技术或业务场景问题，非常专业。直接指出回答中的漏洞。
-2. ！！重要！！你需要以严格的 JSON 格式输出，包含对刚刚候选人回答的好感度打分(0-100分)、你的提问回复、以及 3 个供候选人选择的可能回答。
+2. ！！重要！！你需要以严格的 JSON 格式输出，包含：当前对该候选人的总体好感度打分(0-100分)、本次回答导致的分数变动(如 +5, -10, 0)、考察维度、扣分/加分原因、你的提问回复、以及 3 个供候选人选择的可能回答。
    这 3 个供选择的回答必须呈现【完全不同的风格和水平】，以便测试候选人的选择：
    - 选项A：【硬核技术流】展现深厚的技术底蕴或完美的场景解决思路。
    - 选项B：【理论派/浮于表面】只会说概念，缺乏实操细节。
    - 选项C：【踩坑回答】完全不懂装懂，或者暴露出技术栈严重不匹配。
-   JSON格式必须为：{"score": 75, "reply": "你的提问内容...", "options": ["选项A的内容", "选项B的内容", "选项C的内容"]} 
+   JSON格式必须为：{"score": 75, "score_change": 5, "dimension": "技术深度", "reason": "候选人对底层原理有一定了解，但缺乏大型项目实战支撑", "reply": "你的提问内容...", "options": ["选项A的内容", "选项B的内容", "选项C的内容"]} 
 `;
   } else if (agentRole === 'growth') {
     return baseContext + `
 你是 潜力与成长导师 (Growth)。你态度温和，鼓励式面试，看重未来潜力。
 你的主要考察点：
-1. 候选人的学习能力、适应能力。
-2. 遇到困难时的态度和解决思路。
+1. 学习能力与自驱力 (Learning)
+2. 抗压能力与复盘思维 (Resilience)
+3. 团队协作意识 (Teamwork)
+
 规则：
 1. 用启发式的口吻提问，发掘候选人身上的闪光点。
-2. ！！重要！！你需要以严格的 JSON 格式输出，包含对刚刚候选人回答的好感度打分(0-100分)、你的提问回复、以及 3 个供候选人选择的可能回答。
+2. ！！重要！！你需要以严格的 JSON 格式输出，包含：当前对该候选人的总体好感度打分(0-100分)、本次回答导致的分数变动(如 +5, -10, 0)、考察维度、扣分/加分原因、你的提问回复、以及 3 个供候选人选择的可能回答。
    这 3 个供选择的回答必须呈现【完全不同的风格和水平】，以便测试候选人的选择：
    - 选项A：【成长型思维】展现出极强的自驱力、复盘能力和拥抱变化的态度。
    - 选项B：【被动型思维】遇到困难倾向于依赖他人或环境，缺乏主动思考。
    - 选项C：【固步自封】拒绝改变，或者面对挫折容易放弃。
-   JSON格式必须为：{"score": 75, "reply": "你的提问内容...", "options": ["选项A的内容", "选项B的内容", "选项C的内容"]} 
+   JSON格式必须为：{"score": 75, "score_change": 0, "dimension": "抗压能力", "reason": "候选人回答中规中矩，暂未看出明显的抗压特质", "reply": "你的提问内容...", "options": ["选项A的内容", "选项B的内容", "选项C的内容"]} 
 `;
   } else if (agentRole === 'arbitration') {
     return `
@@ -200,11 +205,18 @@ app.post('/api/chat', async (req, res) => {
       let finalScore = 60;
       let finalReply = fullContent;
       let options = [];
+      let scoreChange = 0;
+      let dimension = '';
+      let reason = '';
+
       try {
         // Try to fix truncated JSON from LLM output if necessary
         const cleanContent = fullContent.trim().replace(/```json/g, '').replace(/```/g, '');
         const obj = JSON.parse(cleanContent);
         if (obj.score) finalScore = obj.score;
+        if (obj.score_change !== undefined) scoreChange = obj.score_change;
+        if (obj.dimension) dimension = obj.dimension;
+        if (obj.reason) reason = obj.reason;
         if (obj.reply) finalReply = obj.reply;
         if (obj.options && Array.isArray(obj.options)) options = obj.options;
       } catch(e) {
@@ -217,7 +229,15 @@ app.post('/api/chat', async (req, res) => {
           } catch (err) {}
         }
       }
-      res.write(`data: ${JSON.stringify({ done: true, score: finalScore, fullReply: finalReply, options: options })}\n\n`);
+      res.write(`data: ${JSON.stringify({ 
+        done: true, 
+        score: finalScore, 
+        score_change: scoreChange,
+        dimension: dimension,
+        reason: reason,
+        fullReply: finalReply, 
+        options: options 
+      })}\n\n`);
       res.end();
     });
 

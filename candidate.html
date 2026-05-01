@@ -79,6 +79,16 @@
         line-height: 1.5;
         white-space: pre-wrap;
       }
+      .msg-algorithm-badge {
+        font-size: 11px;
+        color: var(--brand);
+        background: rgba(31, 102, 255, 0.1);
+        padding: 4px 8px;
+        border-radius: 4px;
+        margin-top: 8px;
+        display: inline-block;
+        border: 1px solid rgba(31, 102, 255, 0.2);
+      }
       .message.user .msg-bubble {
         background: var(--brand);
         color: white;
@@ -165,7 +175,7 @@
     <main class="app">
       <!-- Step 1: Setup -->
       <section id="setupScreen" class="panel controls setup-screen" style="margin-top: 60px;">
-        <h2 style="margin-bottom: 20px; font-size: 20px;">第一步：选择真实岗位与输入简历</h2>
+        <h2 style="margin-bottom: 20px; font-size: 20px;">第一步：选择岗位与注入真实简历</h2>
         <div class="control-row" style="grid-template-columns: 1fr;">
           <label class="control">
             <span>请从《AI大赛脱敏数据》中挑选一个真实JD</span>
@@ -174,15 +184,15 @@
             </select>
           </label>
         </div>
-        <div id="loadingStatus" style="color: var(--warm); font-size: 14px; text-align: center; margin-top: 10px;" class="hidden">加载中...请稍候</div>
         <div class="control-row" style="grid-template-columns: 1fr; margin-top: 16px;">
           <label class="control">
-            <span>一句话介绍你的简历亮点（作为Agent上下文）</span>
-            <input id="resumeInput" type="text" placeholder="例如：我有3年大厂前端经验，熟练Vue/React，带过团队。" />
+            <span>💡 数据注入：贴入您的真实简历或工作亮点（算法引擎的核心依据）</span>
+            <textarea id="resumeInput" rows="4" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,0.8);" placeholder="例如：我毕业于XX大学计算机系，熟练掌握 Vue/React，曾主导重构公司核心交易系统，将加载速度提升50%。请尽情注入您的真实经历，以便算法为您打分！"></textarea>
           </label>
         </div>
+        <div id="loadingStatus" style="color: var(--warm); font-size: 14px; text-align: center; margin-top: 10px;" class="hidden">加载中...请稍候</div>
         <div style="margin-top: 24px; text-align: center;">
-          <button id="startBtn" class="btn" style="width: 100%;">开始群面挑战</button>
+          <button id="startBtn" class="btn" style="width: 100%;">注入数据并开始群面挑战</button>
         </div>
       </section>
 
