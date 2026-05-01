@@ -146,13 +146,16 @@ async function triggerAgentTurn() {
     const decoder = new TextDecoder('utf-8');
     let done = false;
     let currentRawJson = '';
+    let buffer = ''; // Add buffer for incomplete SSE lines
 
     while (!done) {
       const { value, done: readerDone } = await reader.read();
       done = readerDone;
       if (value) {
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep the last incomplete line in buffer
+
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const dataStr = line.substring(6);
