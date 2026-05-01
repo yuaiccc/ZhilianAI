@@ -121,8 +121,10 @@ app.post('/api/decide_agent', async (req, res) => {
 3. "growth" (潜力与成长导师，关注学习能力、潜力和态度)
 
 请根据以上的聊天记录上下文，判断下一轮由哪位面试官来提问最合适。
-如果你觉得某个话题需要深入，可以继续让上一位面试官追问；如果你觉得某个维度的考察已经足够，可以切换另一位面试官。
-请直接返回纯文本："hr" 或 "biz" 或 "growth"，不要输出其他任何内容。
+！！高阶指令！！如果你觉得候选人刚刚的回答非常有争议，或者同时触及了技术和人品的问题，你可以决定让【两个】面试官同时对他发起“连珠炮”式的压力追问！
+请直接返回纯文本，如果是一个人问就返回："hr" 或 "biz" 或 "growth"。
+如果是两个人连击插话，请返回逗号分隔的两个名字，例如："hr,biz" 或 "biz,growth" (注意：极少触发，只在需要施加高压时使用)。
+不要输出其他任何内容。
 `;
 
   const ollamaMessages = [
@@ -131,7 +133,7 @@ app.post('/api/decide_agent', async (req, res) => {
       role: m.role,
       content: m.content
     })),
-    { role: 'user', content: '请决定下一位提问的面试官是谁？(只回答 hr 或 biz 或 growth)' }
+    { role: 'user', content: '请决定下一位(或两位)提问的面试官是谁？(只返回标识符)' }
   ];
 
   try {
@@ -141,15 +143,20 @@ app.post('/api/decide_agent', async (req, res) => {
       stream: false
     });
     
-    let nextAgent = response.data.message.content.trim().toLowerCase();
-    if (!['hr', 'biz', 'growth'].includes(nextAgent)) {
-      nextAgent = 'hr'; // fallback
-    }
+    let nextAgentStr = response.data.message.content.trim().toLowerCase();
     
-    res.json({ next_agent: nextAgent });
+    // Parse possible multiple agents (e.g. "hr,biz" or "biz, growth")
+    const agents = nextAgentStr.split(/[,，\s]+/).filter(a => ['hr', 'biz', 'growth'].includes(a));
+    
+    if (agents.length === 0) {
+      res.json({ next_agents: ['hr'] }); // fallback
+    } else {
+      // Limit to max 2 agents to avoid too much chaos
+      res.json({ next_agents: agents.slice(0, 2) });
+    }
   } catch (error) {
     console.error('Ollama Decide Agent Error:', error.message);
-    res.json({ next_agent: 'hr' }); // fallback
+    res.json({ next_agents: ['hr'] }); // fallback
   }
 });
 

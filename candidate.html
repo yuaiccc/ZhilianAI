@@ -227,8 +227,13 @@
         <div id="chatMessages" class="chat-messages">
           <!-- Messages go here -->
         </div>
-        <div class="chat-input-area">
-          <div style="width: 100%; display: flex; flex-direction: column; gap: 10px;">
+        <div class="chat-input-area" style="position: relative;">
+          <!-- 压力倒计时条 -->
+          <div id="pressureBarContainer" class="hidden" style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: rgba(255,0,0,0.1);">
+            <div id="pressureBar" style="width: 100%; height: 100%; background: var(--reject); transition: width 1s linear;"></div>
+          </div>
+          
+          <div style="width: 100%; display: flex; flex-direction: column; gap: 10px; padding-top: 6px;">
             <div id="suggestedOptions" style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px;">
               <!-- Dynamic options go here -->
             </div>

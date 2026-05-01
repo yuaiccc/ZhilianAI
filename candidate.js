@@ -31,8 +31,44 @@ const els = {
   barBiz: document.getElementById('barBiz'),
   scoreGrowth: document.getElementById('scoreGrowth'),
   barGrowth: document.getElementById('barGrowth'),
-  suggestedOptions: document.getElementById('suggestedOptions')
+  suggestedOptions: document.getElementById('suggestedOptions'),
+  pressureBarContainer: document.getElementById('pressureBarContainer'),
+  pressureBar: document.getElementById('pressureBar')
 };
+
+let pressureTimer = null;
+let pressureSecondsLeft = 30;
+
+function startPressureTimer() {
+  clearInterval(pressureTimer);
+  pressureSecondsLeft = 30;
+  els.pressureBarContainer.classList.remove('hidden');
+  els.pressureBar.style.transition = 'none';
+  els.pressureBar.style.width = '100%';
+  
+  // Force reflow
+  void els.pressureBar.offsetWidth;
+  
+  els.pressureBar.style.transition = 'width 1s linear';
+  
+  pressureTimer = setInterval(() => {
+    pressureSecondsLeft--;
+    const pct = (pressureSecondsLeft / 30) * 100;
+    els.pressureBar.style.width = `${pct}%`;
+    
+    if (pressureSecondsLeft <= 0) {
+      clearInterval(pressureTimer);
+      // Time is up! Force a bad response or auto submit
+      els.chatInput.value = "（由于思考时间过长，候选人支支吾吾没有回答出来）";
+      els.sendBtn.click();
+    }
+  }, 1000);
+}
+
+function stopPressureTimer() {
+  clearInterval(pressureTimer);
+  els.pressureBarContainer.classList.add('hidden');
+}
 
 async function init() {
   els.loadingStatus?.classList.remove('hidden');
@@ -86,7 +122,7 @@ function appendMessage(role, text, agentName = '') {
 }
 
 async function getNextAgent() {
-  if (messages.length === 0) return 'hr'; // First question is always HR
+  if (messages.length === 0) return ['hr']; // First question is always HR only
 
   try {
     const res = await fetch('http://localhost:3005/api/decide_agent', {
@@ -99,145 +135,141 @@ async function getNextAgent() {
       })
     });
     const data = await res.json();
-    return data.next_agent || 'hr';
+    return data.next_agents || ['hr'];
   } catch(e) {
     console.error('Failed to decide next agent', e);
     // fallback to cyclic if LLM fails
     const nextIdx = (currentAgentIndex + 1) % 3;
-    return agentCycle[nextIdx];
+    return [agentCycle[nextIdx]];
   }
 }
 
 async function triggerAgentTurn() {
   const agentRoles = { 'hr': 'HR 面试官', 'biz': '业务专家', 'growth': '成长导师' };
   
-  // Dynamically decide which agent should ask the next question
   els.progressText.textContent = `等待主持人决策... (${currentTurn}/${MAX_TURNS})`;
-  const targetAgent = await getNextAgent();
-  const agentName = agentRoles[targetAgent];
+  const targetAgents = await getNextAgent();
   
-  currentAgentIndex = agentCycle.indexOf(targetAgent);
-  currentTurn++;
-  els.progressText.textContent = `进度: ${currentTurn}/${MAX_TURNS}`;
-  
-  appendMessage('agent', '正在思考提问...', agentName);
-  els.sendBtn.disabled = true;
-  els.chatInput.disabled = true;
-
-  try {
-    els.chatMessages.lastChild.remove();
+  for (let i = 0; i < targetAgents.length; i++) {
+    const targetAgent = targetAgents[i];
+    const agentName = agentRoles[targetAgent];
     
-    // Create an empty bubble for streaming
-    appendMessage('agent', '', agentName);
-    const lastBubble = els.chatMessages.lastElementChild.querySelector('.msg-bubble');
+    currentAgentIndex = agentCycle.indexOf(targetAgent);
+    currentTurn++;
+    els.progressText.textContent = `进度: ${currentTurn}/${MAX_TURNS}`;
     
-    // Using fetch to read the stream
-    const res = await fetch('http://localhost:3005/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jd: selectedJd,
-        resume: resumeContext,
-        messages: messages,
-        target_agent: targetAgent
-      })
-    });
+    appendMessage('agent', '正在思考提问...', agentName);
+    els.sendBtn.disabled = true;
+    els.chatInput.disabled = true;
+    els.suggestedOptions.innerHTML = '';
+    
+    // Stop pressure timer while agent is typing
+    stopPressureTimer();
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let done = false;
-    let currentRawJson = '';
-    let buffer = ''; // Add buffer for incomplete SSE lines
+    try {
+      els.chatMessages.lastChild.remove();
+      appendMessage('agent', '', agentName);
+      const lastBubble = els.chatMessages.lastElementChild.querySelector('.msg-bubble');
+      
+      const res = await fetch('http://localhost:3005/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jd: selectedJd,
+          resume: resumeContext,
+          messages: messages,
+          target_agent: targetAgent
+        })
+      });
 
-    while (!done) {
-      const { value, done: readerDone } = await reader.read();
-      done = readerDone;
-      if (value) {
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop(); // keep the last incomplete line in buffer
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let done = false;
+      let currentRawJson = '';
+      let buffer = ''; 
 
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const dataStr = line.substring(6);
-            try {
-              const data = JSON.parse(dataStr);
-              
-              if (data.done) {
-                // Update UI Likeability score
-                if (data.score) {
-                  const scoreId = targetAgent.charAt(0).toUpperCase() + targetAgent.slice(1);
-                  const scoreEl = els['score' + scoreId];
-                  const barEl = els['bar' + scoreId];
-                  if (scoreEl && barEl) {
-                    scoreEl.textContent = data.score;
-                    barEl.style.width = data.score + '%';
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+        if (value) {
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); 
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const dataStr = line.substring(6);
+              try {
+                const data = JSON.parse(dataStr);
+                
+                if (data.done) {
+                  if (data.score) {
+                    const scoreId = targetAgent.charAt(0).toUpperCase() + targetAgent.slice(1);
+                    const scoreEl = els['score' + scoreId];
+                    const barEl = els['bar' + scoreId];
+                    if (scoreEl && barEl) {
+                      scoreEl.textContent = data.score;
+                      barEl.style.width = data.score + '%';
+                    }
+                  }
+                  
+                  let cleanReply = (data.fullReply || "").replace(/^(?:\[?(?:HR 面试官|业务专家|成长导师|HR|Biz|Growth)\]?[:：]\s*)+/gi, '').trim();
+                  lastBubble.textContent = cleanReply;
+                  
+                  if (data.score_change !== undefined && data.dimension) {
+                    const badge = document.createElement('div');
+                    badge.className = 'msg-algorithm-badge';
+                    const sign = data.score_change >= 0 ? '+' : '';
+                    const color = data.score_change >= 0 ? 'var(--pass)' : 'var(--reject)';
+                    badge.innerHTML = `⚙️ [打分引擎] <strong>${data.dimension} <span style="color: ${color}">${sign}${data.score_change}</span></strong>：${escapeHtml(data.reason)}`;
+                    els.chatMessages.lastElementChild.appendChild(badge);
+                  }
+
+                  messages.push({ role: 'assistant', content: `[${agentName}]: ${cleanReply}` });
+                  
+                  // Only show options if it's the LAST agent speaking in this turn
+                  if (i === targetAgents.length - 1 && data.options && data.options.length > 0) {
+                    data.options.forEach(opt => {
+                      const cleanOpt = opt.replace(/^(?:选项[A-C1-3](?:的内容)?[:：\s]*|[A-C1-3]\.[:：\s]*)/i, '').trim();
+                      const btn = document.createElement('button');
+                      btn.className = 'suggest-btn';
+                      btn.textContent = cleanOpt;
+                      btn.onclick = () => {
+                        els.chatInput.value = cleanOpt;
+                        els.sendBtn.click();
+                      };
+                      els.suggestedOptions.appendChild(btn);
+                    });
+                  }
+                  
+                } else if (data.chunk) {
+                  currentRawJson += data.chunk;
+                  const replyMatch = currentRawJson.match(/"reply"\s*:\s*"([^"]*)/);
+                  if (replyMatch) {
+                    lastBubble.textContent = replyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                    els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
                   }
                 }
-                
-                // 清理大模型可能自我嵌套的前缀
-                let cleanReply = (data.fullReply || "").replace(/^(?:\[?(?:HR 面试官|业务专家|成长导师|HR|Biz|Growth)\]?[:：]\s*)+/gi, '').trim();
-                lastBubble.textContent = cleanReply;
-                
-                // Show algorithm rationale badge if present
-                if (data.score_change !== undefined && data.dimension) {
-                  const badge = document.createElement('div');
-                  badge.className = 'msg-algorithm-badge';
-                  const sign = data.score_change >= 0 ? '+' : '';
-                  const color = data.score_change >= 0 ? 'var(--pass)' : 'var(--reject)';
-                  badge.innerHTML = `⚙️ [打分引擎] <strong>${data.dimension} <span style="color: ${color}">${sign}${data.score_change}</span></strong>：${escapeHtml(data.reason)}`;
-                  els.chatMessages.lastElementChild.appendChild(badge);
-                }
-
-                // 后端上下文带上角色名
-                messages.push({ role: 'assistant', content: `[${agentName}]: ${cleanReply}` });
-                
-                // Render suggested options if any
-                els.suggestedOptions.innerHTML = '';
-                if (data.options && data.options.length > 0) {
-                  data.options.forEach(opt => {
-                    // 清理选项中可能带有的前缀如 "选项A：", "选项A的内容：", "A." 等
-                    const cleanOpt = opt.replace(/^(?:选项[A-C1-3](?:的内容)?[:：\s]*|[A-C1-3]\.[:：\s]*)/i, '').trim();
-                    
-                    const btn = document.createElement('button');
-                    btn.className = 'suggest-btn';
-                    btn.textContent = cleanOpt;
-                    btn.onclick = () => {
-                      els.chatInput.value = cleanOpt;
-                      els.sendBtn.click();
-                    };
-                    els.suggestedOptions.appendChild(btn);
-                  });
-                }
-                
-              } else if (data.chunk) {
-                // To show streaming text smoothly, we just append raw chunk to currentRawJson 
-                // and try to parse the "reply" part if possible. 
-                // Since Ollama formats as {"score": XX, "reply": "..."} we can do a naive regex extract for live display
-                currentRawJson += data.chunk;
-                const replyMatch = currentRawJson.match(/"reply"\s*:\s*"([^"]*)/);
-                if (replyMatch) {
-                  // Replace literal \n with actual newlines
-                  lastBubble.textContent = replyMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-                  els.chatMessages.scrollTop = els.chatMessages.scrollHeight;
-                }
+              } catch (e) {
+                console.error("Stream parse error", e);
               }
-            } catch (e) {
-              console.error("Stream parse error", e);
             }
           }
         }
       }
+      
+    } catch (err) {
+      els.chatMessages.lastChild.remove();
+      appendMessage('agent', '大模型接口请求失败，请确保本地 Ollama 正在运行。', agentName);
     }
-    
-  } catch (err) {
-    els.chatMessages.lastChild.remove();
-    appendMessage('agent', '大模型接口请求失败，请确保本地 Ollama 正在运行。', agentName);
-  } finally {
-    els.sendBtn.disabled = false;
-    els.chatInput.disabled = false;
-    els.chatInput.focus();
   }
+
+  els.sendBtn.disabled = false;
+  els.chatInput.disabled = false;
+  els.chatInput.focus();
+  
+  // Start pressure timer for the user to answer
+  startPressureTimer();
 }
 
 els.sendBtn.addEventListener('click', () => {
