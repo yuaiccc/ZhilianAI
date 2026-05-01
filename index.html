@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>多评委合议可视化实验台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+    <div class="bg-grid"></div>
+
+    <main class="app">
+      <header class="hero reveal">
+        <p class="eyebrow">Ollama · Qwen2.5:7b · Local Inference</p>
+        <h1>三评委合议可视化实验台</h1>
+        <p class="hero-sub">
+          面向“AI+求职/招聘/创意”赛题的最小可行验证：HR 评委、业务评委、成长评委独立打分，合议输出最终建议。
+        </p>
+      </header>
+
+      <section class="panel controls reveal">
+        <div class="control-row">
+          <label class="control">
+            <span>候选人筛选</span>
+            <select id="cvFilter"></select>
+          </label>
+          <label class="control">
+            <span>合议结论</span>
+            <select id="recFilter">
+              <option value="all">全部</option>
+              <option value="pass">pass</option>
+              <option value="review">review</option>
+              <option value="reject">reject</option>
+            </select>
+          </label>
+          <label class="control">
+            <span>岗位关键词</span>
+            <input id="searchInput" type="text" placeholder="如：新媒体 / 电工 / 合伙人" />
+          </label>
+        </div>
+        <div class="control-row">
+          <label class="control">
+            <span>最低总分</span>
+            <input id="minScore" type="range" min="0" max="100" value="0" />
+            <em id="minScoreValue">0</em>
+          </label>
+          <label class="control file-control">
+            <span>加载本地 JSON（可选）</span>
+            <input id="fileInput" type="file" accept="application/json" />
+          </label>
+          <button id="resetBtn" class="ghost-btn" type="button">重置筛选</button>
+        </div>
+      </section>
+
+      <section class="summary-grid reveal" id="summaryGrid">
+        <article class="metric-card">
+          <h3>测试配对数</h3>
+          <p id="pairsCount">-</p>
+        </article>
+        <article class="metric-card">
+          <h3>平均合议分</h3>
+          <p id="avgScore">-</p>
+        </article>
+        <article class="metric-card">
+          <h3>通过率</h3>
+          <p id="passRate">-</p>
+        </article>
+        <article class="metric-card">
+          <h3>评委分歧均值</h3>
+          <p id="spreadAvg">-</p>
+        </article>
+      </section>
+
+      <section class="panel dist-panel reveal">
+        <h2>结论分布</h2>
+        <div id="distBars" class="dist-bars"></div>
+      </section>
+
+      <section class="panel results-panel reveal">
+        <div class="results-head">
+          <h2>配对结果</h2>
+          <p id="resultHint">-</p>
+        </div>
+        <div id="resultsGrid" class="results-grid"></div>
+      </section>
+    </main>
+
+    <aside id="detailDrawer" class="drawer">
+      <div class="drawer-inner">
+        <button id="closeDrawer" class="close-btn" type="button" aria-label="关闭详情">×</button>
+        <div id="drawerContent"></div>
+      </div>
+    </aside>
+
+    <template id="roleTemplate">
+      <article class="role-card">
+        <div class="role-head">
+          <h4></h4>
+          <span class="risk-pill"></span>
+        </div>
+        <div class="score-bar">
+          <span class="bar-fill"></span>
+        </div>
+        <p class="role-score"></p>
+        <ul class="plain-list role-reasons"></ul>
+      </article>
+    </template>
+
+    <script src="./data/ollama_multi_judge_result.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

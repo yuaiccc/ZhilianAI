@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI创新大赛 - 多Agent群聊会诊面试</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <style>
+      /* 专属聊天界面样式补充 */
+      .chat-container {
+        display: flex;
+        flex-direction: column;
+        height: 600px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 12px 30px rgba(20, 40, 95, 0.08);
+        overflow: hidden;
+      }
+      .chat-header {
+        padding: 16px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.5);
+      }
+      .avatars {
+        display: flex;
+        gap: 12px;
+      }
+      .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: white;
+        font-size: 12px;
+      }
+      .avatar.hr { background: var(--warm); }
+      .avatar.biz { background: var(--brand); }
+      .avatar.growth { background: var(--pass); }
+      
+      .chat-messages {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .message {
+        display: flex;
+        flex-direction: column;
+        max-width: 80%;
+      }
+      .message.user {
+        align-self: flex-end;
+        align-items: flex-end;
+      }
+      .message.agent {
+        align-self: flex-start;
+        align-items: flex-start;
+      }
+      .msg-bubble {
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+      .message.user .msg-bubble {
+        background: var(--brand);
+        color: white;
+        border-bottom-right-radius: 4px;
+      }
+      .message.agent .msg-bubble {
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        border-bottom-left-radius: 4px;
+      }
+      .msg-name {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 4px;
+        font-weight: bold;
+      }
+      
+      .chat-input-area {
+        padding: 16px;
+        background: rgba(255, 255, 255, 0.5);
+        border-top: 1px solid var(--line);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .chat-input-area input {
+        flex: 1;
+      }
+      .suggest-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+        border-radius: 16px;
+        border: 1px solid var(--brand);
+        background: rgba(31, 102, 255, 0.1);
+        color: var(--brand);
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+      }
+      .suggest-btn:hover {
+        background: var(--brand);
+        color: white;
+      }
+      .btn {
+        padding: 0 20px;
+        height: 40px;
+        border-radius: 10px;
+        border: none;
+        background: var(--brand);
+        color: white;
+        font-weight: bold;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .btn:hover { opacity: 0.9; }
+      .btn:disabled { background: var(--muted); cursor: not-allowed; }
+
+      .setup-screen {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+      
+      .hidden { display: none !important; }
+      
+      .arbitration-panel {
+        background: rgba(0, 0, 0, 0.85);
+        color: #0f0;
+        font-family: monospace;
+        padding: 20px;
+        border-radius: 12px;
+        margin-top: 20px;
+        white-space: pre-wrap;
+        line-height: 1.6;
+        height: 300px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="bg-orb orb-a"></div>
+    <div class="bg-orb orb-b"></div>
+    <div class="bg-grid"></div>
+
+    <main class="app">
+      <!-- Step 1: Setup -->
+      <section id="setupScreen" class="panel controls setup-screen" style="margin-top: 60px;">
+        <h2 style="margin-bottom: 20px; font-size: 20px;">第一步：选择真实岗位与输入简历</h2>
+        <div class="control-row" style="grid-template-columns: 1fr;">
+          <label class="control">
+            <span>请从《AI大赛脱敏数据》中挑选一个真实JD</span>
+            <select id="jdSelect">
+              <option value="">正在加载真实JD库...</option>
+            </select>
+          </label>
+        </div>
+        <div id="loadingStatus" style="color: var(--warm); font-size: 14px; text-align: center; margin-top: 10px;" class="hidden">加载中...请稍候</div>
+        <div class="control-row" style="grid-template-columns: 1fr; margin-top: 16px;">
+          <label class="control">
+            <span>一句话介绍你的简历亮点（作为Agent上下文）</span>
+            <input id="resumeInput" type="text" placeholder="例如：我有3年大厂前端经验，熟练Vue/React，带过团队。" />
+          </label>
+        </div>
+        <div style="margin-top: 24px; text-align: center;">
+          <button id="startBtn" class="btn" style="width: 100%;">开始群面挑战</button>
+        </div>
+      </section>
+
+      <!-- Step 2: Chat -->
+      <section id="chatScreen" class="chat-container hidden">
+        <div class="chat-header">
+          <div class="avatars">
+            <div class="avatar hr" title="HR 面试官">HR</div>
+            <div class="avatar biz" title="业务专家">Biz</div>
+            <div class="avatar growth" title="成长导师">Gro</div>
+          </div>
+          <div style="flex: 1; margin-left: 20px; display: flex; gap: 16px;">
+            <div style="display: flex; flex-direction: column; font-size: 12px; color: var(--muted);">
+              <span>HR 好感度 <strong id="scoreHr" style="color: var(--warm)">50</strong></span>
+              <div style="width: 60px; height: 4px; background: #eee; border-radius: 2px;"><div id="barHr" style="width: 50%; height: 100%; background: var(--warm); border-radius: 2px; transition: width 0.5s;"></div></div>
+            </div>
+            <div style="display: flex; flex-direction: column; font-size: 12px; color: var(--muted);">
+              <span>Biz 好感度 <strong id="scoreBiz" style="color: var(--brand)">50</strong></span>
+              <div style="width: 60px; height: 4px; background: #eee; border-radius: 2px;"><div id="barBiz" style="width: 50%; height: 100%; background: var(--brand); border-radius: 2px; transition: width 0.5s;"></div></div>
+            </div>
+            <div style="display: flex; flex-direction: column; font-size: 12px; color: var(--muted);">
+              <span>Growth 好感度 <strong id="scoreGrowth" style="color: var(--pass)">50</strong></span>
+              <div style="width: 60px; height: 4px; background: #eee; border-radius: 2px;"><div id="barGrowth" style="width: 50%; height: 100%; background: var(--pass); border-radius: 2px; transition: width 0.5s;"></div></div>
+            </div>
+          </div>
+          <div>
+            <span id="progressText" class="eyebrow" style="margin: 0; margin-right: 12px; vertical-align: middle;">进度: 1/6</span>
+            <span id="currentJdTitle" style="font-weight: bold; color: var(--brand); margin-right: 16px; vertical-align: middle;"></span>
+            <button id="endInterviewBtn" class="btn" style="height: 30px; padding: 0 12px; background: var(--warm); vertical-align: middle;">提前结束</button>
+          </div>
+        </div>
+        <div id="chatMessages" class="chat-messages">
+          <!-- Messages go here -->
+        </div>
+        <div class="chat-input-area">
+          <input id="chatInput" type="text" placeholder="输入你的回答..." autocomplete="off" />
+          <button id="sendBtn" class="btn">发送</button>
+        </div>
+      </section>
+
+      <!-- Step 3: Arbitration & Report -->
+      <section id="reportScreen" class="hidden" style="margin-top: 30px;">
+        <h2 style="margin-bottom: 16px;">内部合议现场 (解密评审黑盒)</h2>
+        <div id="arbitrationLog" class="arbitration-panel">
+          等待生成内部合议记录...
+        </div>
+
+        <div class="summary-grid" style="margin-top: 30px;">
+          <article class="metric-card">
+            <h3>AI综合评分</h3>
+            <p id="finalScore">-</p>
+          </article>
+          <article class="metric-card">
+            <h3>最终建议</h3>
+            <p id="finalRecommend">-</p>
+          </article>
+        </div>
+
+        <section class="panel" style="margin-top: 20px; padding: 20px;">
+          <h3 style="margin-bottom: 16px;">通关攻略与行动建议</h3>
+          <ul id="actionSuggestions" style="line-height: 1.8; color: var(--muted);">
+            <li>正在生成中...</li>
+          </ul>
+        </section>
+        
+        <div style="margin-top: 24px; text-align: center;">
+          <button onclick="location.reload()" class="ghost-btn" style="width: 200px;">重新面试</button>
+        </div>
+      </section>
+    </main>
+
+    <script src="./candidate.js"></script>
+  </body>
+</html>
