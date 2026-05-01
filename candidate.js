@@ -33,7 +33,9 @@ const els = {
   barGrowth: document.getElementById('barGrowth'),
   suggestedOptions: document.getElementById('suggestedOptions'),
   pressureBarContainer: document.getElementById('pressureBarContainer'),
-  pressureBar: document.getElementById('pressureBar')
+  pressureBar: document.getElementById('pressureBar'),
+  headerJdDesc: document.getElementById('headerJdDesc'),
+  headerResumeDesc: document.getElementById('headerResumeDesc')
 };
 
 let pressureTimer = null;
@@ -102,6 +104,8 @@ els.startBtn.addEventListener('click', () => {
   els.setupScreen.classList.add('hidden');
   els.chatScreen.classList.remove('hidden');
   els.currentJdTitle.textContent = `面试岗位: ${selectedJd['职位名称']}`;
+  els.headerJdDesc.textContent = `${selectedJd['薪资']} | ${selectedJd['学历要求']} | ${selectedJd['年限要求']} - ${selectedJd['职位描述'].replace(/\n/g, ' ')}`;
+  els.headerResumeDesc.textContent = resumeContext;
   
   // Trigger first question
   triggerAgentTurn();
@@ -165,7 +169,6 @@ async function triggerAgentTurn() {
     currentTurn++;
     els.progressText.textContent = `进度: ${currentTurn}/${MAX_TURNS}`;
     
-    appendMessage('agent', '正在思考提问...', agentName);
     els.sendBtn.disabled = true;
     els.chatInput.disabled = true;
     els.suggestedOptions.innerHTML = '';
@@ -174,8 +177,14 @@ async function triggerAgentTurn() {
     stopPressureTimer();
 
     try {
-      els.chatMessages.lastChild.remove();
-      appendMessage('agent', '', agentName);
+      let initialGreeting = '';
+      if (messages.length === 0 && targetAgent === 'hr') {
+        initialGreeting = '你好！我是今天的HR面试官，感谢你来参加本次面试。\n我已经看过了你的简历。';
+        appendMessage('agent', initialGreeting, agentName);
+      } else {
+        appendMessage('agent', '正在思考提问...', agentName);
+      }
+      
       const lastBubble = els.chatMessages.lastElementChild.querySelector('.msg-bubble');
       
       const res = await fetch('http://localhost:3005/api/chat', {

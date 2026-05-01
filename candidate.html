@@ -266,6 +266,19 @@
             <button id="endInterviewBtn" class="btn" style="height: 30px; padding: 0 12px; background: var(--warm); vertical-align: middle;">提前结束</button>
           </div>
         </div>
+        
+        <!-- JD Context Info Bar -->
+        <div style="background: rgba(31, 102, 255, 0.05); border-bottom: 1px solid rgba(0,0,0,0.05); padding: 12px 40px; font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; align-items: flex-start;">
+          <div style="flex: 1; padding-right: 20px;">
+            <div style="font-weight: bold; color: var(--text); margin-bottom: 4px;">🎯 岗位要求</div>
+            <div id="headerJdDesc" style="line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;"></div>
+          </div>
+          <div style="flex: 1; padding-left: 20px; border-left: 1px solid rgba(0,0,0,0.1);">
+            <div style="font-weight: bold; color: var(--text); margin-bottom: 4px;">👤 我的情况 (注入数据)</div>
+            <div id="headerResumeDesc" style="line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;"></div>
+          </div>
+        </div>
+
         <div id="chatMessages" class="chat-messages">
           <!-- Messages go here -->
         </div>

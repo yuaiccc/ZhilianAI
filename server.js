@@ -11,7 +11,33 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname)));
 
 const OLLAMA_URL = 'http://localhost:11434/api/chat';
-const MODEL_NAME = 'qwen2.5:7b'; // You can change this based on the available model
+const MODEL_NAME = 'qwen2.5:7b'; // Or deepseek-r1
+
+// Load IT Tech Questions DB
+const fs = require('fs');
+let techQuestionsDB = [];
+try {
+  techQuestionsDB = JSON.parse(fs.readFileSync('./data/tech_questions_db.json', 'utf-8'));
+} catch (e) {
+  console.warn('Failed to load tech_questions_db.json', e.message);
+}
+
+// Simple RAG retrieval for IT positions
+function retrieveTechQuestions(jdTitle, resumeContext) {
+  const content = (jdTitle + " " + resumeContext).toLowerCase();
+  let matchedQuestions = [];
+  
+  for (const category of techQuestionsDB) {
+    const isMatch = category.keywords.some(kw => content.includes(kw.toLowerCase()));
+    if (isMatch) {
+      // Pick 2 random questions from the matched category
+      const shuffled = category.questions.sort(() => 0.5 - Math.random());
+      matchedQuestions.push(...shuffled.slice(0, 2));
+    }
+  }
+  
+  return matchedQuestions.length > 0 ? '- ' + matchedQuestions.join('\n- ') : '';
+}
 
 // Load JD database
 const jdDataPath = path.join(__dirname, 'data', 'jd_database.json');
@@ -64,7 +90,10 @@ function getSystemPrompt(agentRole, jd, resume) {
    {"score": 75, "score_change": -5, "dimension": "稳定性", "reason": "候选人表达了想短期尝试的意愿，稳定性较差", "reply": "请问您对未来的职业规划是怎样的？", "options": ["我希望在这个岗位上稳扎稳打，成为团队的业务骨干", "我期待在两三年内能带团队，承担更核心的架构工作", "我希望能在一个流程规范的团队里高效产出，保持长期健康的工作节奏"]} 
 `;
   } else if (agentRole === 'biz') {
-    return baseContext + `
+    const techRagContext = retrieveTechQuestions(jd['职位名称'], resume);
+    const ragPrompt = techRagContext ? `\n【RAG 检索到的真实 IT 技术题库参考（请选择其中适合的一个进行提问）】：\n${techRagContext}\n` : '';
+
+    return baseContext + ragPrompt + `
 你是 业务线负责人 (Biz)。你极其看重候选人的实际解决问题能力。
 你的主要考察点：
 1. 技术深度与广度 (Tech Depth)
@@ -72,7 +101,7 @@ function getSystemPrompt(agentRole, jd, resume) {
 3. 真实项目经验 (Experience)
 
 规则：
-1. 每次只问一个具体的技术或业务场景问题，非常专业。直接指出回答中的漏洞。
+1. 每次只问一个具体的技术或业务场景问题，非常专业。直接指出回答中的漏洞。如果是 IT 岗，请务必从上述【RAG 题库】中挑选或变体出一个硬核技术题来拷问！
 2. ！！重要！！你需要以严格的 JSON 格式输出，包含：当前对该候选人的总体好感度打分(0-100分)、本次回答导致的分数变动(如 +5, -10, 0)、考察维度、扣分/加分原因、你的提问回复、以及 3 个供候选人选择的可能回答。
    这 3 个供选择的回答必须【极具迷惑性且都像正常人的回答】。绝对不要出现一眼看出是错的答案（比如“我不会”、“我没做过”）。
    这 3 个选项应该代表【三种不同的技术或业务解决思路】，让用户难以抉择：
